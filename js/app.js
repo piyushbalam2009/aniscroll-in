@@ -45,7 +45,7 @@ async function watchPage(){
  const box=$("#watch-app");
  if(!Number.isInteger(id)||id<1){box.innerHTML='<div class="error-state"><h2>Choose an anime first</h2><a href="/search.html">Discover anime</a></div>';return}
  try{
-  let a=await getMalAnime(initialMalId||id),useMalIds=true,metadataFromMal=true;
+  let a=await getMalAnime(initialMalId||id);
   const malId=Number(a.id)||initialMalId,count=Number(a.episodes)||0,animeTitle=title(a),poster=cover(a);
   const availableEpisodeCount=a.status==="RELEASING"&&a.nextAiringEpisode&&Number(a.nextAiringEpisode.episode)>0?Math.min(count||Number(a.nextAiringEpisode.episode)-1,Number(a.nextAiringEpisode.episode)-1):count;
   document.title="Watch "+animeTitle+" — Aniscroll";
@@ -69,7 +69,7 @@ async function watchPage(){
       '<div class="server-row" id="dub-server-row"><span class="server-label">♩ &nbsp; DUB:</span><span class="dub-availability" id="dub-availability" role="status">Checking availability…</span></div>'+
       ''+
      '</div></div>'+
-     '<section class="watch-anime-info"><img class="watch-info-poster" src="'+esc(poster)+'" alt="'+esc(animeTitle)+' poster"><div class="watch-info-copy"><h1>'+esc(animeTitle)+'</h1><div class="watch-info-stats"><span class="rating-badge">R</span><span class="rating-badge pink">HD</span><span class="rating-badge green">CC '+(count||"—")+'</span><span class="rating-badge blue">♩ '+(count||"—")+'</span><span class="watch-meta-dot">• '+esc(a.format||"TV")+' • '+(a.duration?Number(a.duration)+"m":"24m")+'</span></div><p>'+esc(description.slice(0,540))+(description.length>540?' …':'')+' <button class="inline-more" id="more-description">＋ More</button></p><a class="button button-quiet button-small" href="/watch.html?id='+id+(malId?"&mal="+malId:"")+(metadataFromMal?"&source=mal":"")+'">View detail</a></div></section>'+
+     '<section class="watch-anime-info"><img class="watch-info-poster" src="'+esc(poster)+'" alt="'+esc(animeTitle)+' poster"><div class="watch-info-copy"><h1>'+esc(animeTitle)+'</h1><div class="watch-info-stats"><span class="rating-badge">R</span><span class="rating-badge pink">HD</span><span class="rating-badge green">CC '+(count||"—")+'</span><span class="rating-badge blue">♩ '+(count||"—")+'</span><span class="watch-meta-dot">• '+esc(a.format||"TV")+' • '+(a.duration?Number(a.duration)+"m":"24m")+'</span></div><p>'+esc(description.slice(0,540))+(description.length>540?' …':'')+' <button class="inline-more" id="more-description">＋ More</button></p><a class="button button-quiet button-small" href="/watch.html?id='+id+(malId?"&mal="+malId:"")+"&source=mal"+'">View detail</a></div></section>'+
     '</section>'+
     '<aside class="watch-related-sidebar"><h2>Related</h2><div class="watch-related-list">'+(seasons.length?seasons.map(x=>'<a class="watch-related-item" href="/watch.html?id='+Number(x.node.id)+'"><img src="'+esc(x.node.coverImage?.medium||x.node.coverImage?.large||"")+'" alt=""><span><strong>'+esc(x.node.title?.english||x.node.title?.romaji||"Related anime")+'</strong><small>'+esc(x.node.format||"Anime")+' · '+(x.node.episodes?Number(x.node.episodes)+" Eps":"Episodes unknown")+(x.node.duration?" · "+Number(x.node.duration)+" min":"")+'</small></span></a>').join(""):'<p class="related-empty">No related titles found.</p>')+'</div></aside>'+
    '</div>';
