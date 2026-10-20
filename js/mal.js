@@ -10,7 +10,7 @@ export async function getMalAnime(id){const malId=Number(id);if(!Number.isSafeIn
 export async function searchMalGenre(genre,page=1){const g=String(genre||"").trim();if(!g)return EMPTY;const json=await request("/api/mal/genre?genre="+encodeURIComponent(g)+"&page="+Math.max(1,Number(page)||1));const media=(json.data||[]).map(item=>normalize(item.node||item)).filter(a=>a.id>0);return {media,pageInfo:{total:media.length,currentPage:Math.max(1,Number(page)||1),lastPage:json.paging?.has_more?Math.max(2,Number(page)+1):Math.max(1,Number(page)||1),hasNextPage:Boolean(json.paging?.has_more)}}}
 
 export async function getMalRanking(kind="all",page=1,limit=24){
- const rankingType=({TRENDING:"all",POPULARITY:"bypopularity",SCORE:"all",NEWEST:"upcoming",AIRING:"airing",UPCOMING:"upcoming"})[kind]||kind;
+ const rankingType=({TRENDING:"favorite",POPULARITY:"bypopularity",SCORE:"all",NEWEST:"upcoming",AIRING:"airing",UPCOMING:"upcoming"})[kind]||kind;
  const size=Math.min(100,Math.max(1,Number(limit)||24)),params=new URLSearchParams({ranking_type:rankingType,limit:String(size),offset:String((Math.max(1,Number(page)||1)-1)*size),fields:MAL_FIELDS});
  const json=await request("/api/mal/ranking?"+params);
  const media=(json.data||[]).map(item=>normalize(item.node||item)).filter(a=>a.id>0);
