@@ -66,7 +66,7 @@ Vite writes the production site to `dist/`.
 2. Sign in to [Vercel](https://vercel.com/) and select **Add New → Project**.
 3. Import `piyushbalam2009/aniscroll-in`.
 4. Keep the detected project settings from `vercel.json`: build command `npm run build` and output directory `dist`.
-5. If you use MAL fallback, open **Project Settings → Environment Variables**, add `MAL_CLIENT_ID`, and enable it for Production (and Preview/Development if needed). Do not add the key to frontend JavaScript or commit it.
+5. Open **Project Settings → Environment Variables**, add `MAL_CLIENT_ID`, and enable it for Production (and Preview/Development if needed). All MyAnimeList metadata routes use this server-side key. Do not add it to frontend JavaScript or commit it.
 6. Deploy. Vercel automatically builds new deployments when you push commits to GitHub.
 7. To use `aniscroll.in`, open **Project → Settings → Domains**, add `aniscroll.in` and optionally `www.aniscroll.in`, then follow the DNS records Vercel shows. Do not guess DNS values; use the values displayed in your Vercel project.
 
