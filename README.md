@@ -13,7 +13,7 @@
 - **MyAnimeList-to-MAL API:** Retry supported streams using a title's MAL ID.
 - **MAL-only titles:** Use a MAL ID for supported metadata and provider routes.
 - **Episode navigation:** Select episodes, move between episodes, and search long episode lists.
-- **Schedule:** Browse episode-airing information available from MyAnimeList.
+- **Schedule:** Browse upcoming weekly broadcast times when MyAnimeList provides a broadcast day and time.
 - **Watchlist and history:** Save titles and track watched episodes in your browser.
 - **Responsive interface:** Dark-themed layout for desktop and mobile.
 
@@ -23,8 +23,7 @@ Watchlist and history use browser `localStorage`; they are local to the current 
 
 - HTML5, CSS3, and vanilla JavaScript ES modules
 - [Vite](https://vite.dev/) for development and builds
-- [MyAnimeList GraphQL API](https://docs.MAL.co/) for discovery and metadata
-- [MyAnimeList API v2](https://myanimelist.net/apiconfig/references/api/v2) for optional fallback requests
+- [MyAnimeList API v2](https://myanimelist.net/apiconfig/references/api/v2) for discovery and metadata
 - [Vercel](https://vercel.com/docs) for static hosting and serverless API routes
 
 ## Run locally in GitHub Codespaces
@@ -40,9 +39,9 @@ npm run dev
 
 Open the forwarded port **8443** in Codespaces.
 
-### Optional MyAnimeList fallback
+### MyAnimeList API configuration
 
-MyAnimeList discovery does not require a MAL API key. MAL fallback routes require a **MyAnimeList Client ID**.
+MyAnimeList API v2 requires a **MyAnimeList Client ID** for discovery, search, rankings, genre browsing, and title details.
 
 Create a MyAnimeList API application and add the following to a local `.env` file in the project root:
 
@@ -114,15 +113,14 @@ These are integration URL patterns, not a guarantee that a title or episode is a
 
 ## Troubleshooting
 
-- **MAL fallback says Client ID is missing:** Set `MAL_CLIENT_ID` in Vercel Project Settings → Environment Variables, then redeploy. For local development, put it in `.env` and restart Vite.
+- **MyAnimeList requests say Client ID is missing:** Set `MAL_CLIENT_ID` in Vercel Project Settings → Environment Variables, then redeploy. For local development, put it in `.env` and restart Vite.
 - **An episode does not play:** Try another episode or provider. A fallback only works when a MAL ID exists and the provider supports that route.
-- **Anime metadata does not load:** Check your internet connection and the status/availability of MyAnimeList or MyAnimeList.
+- **Anime metadata does not load:** Check your internet connection, `MAL_CLIENT_ID`, and the availability of MyAnimeList API v2.
 - **Changes do not appear in Codespaces:** Save files and hard-refresh with `Ctrl+Shift+R`.
 
 ## Credits and third-party services
 
-- [MyAnimeList](https://MAL.co/) — anime metadata and discovery.
-- [MyAnimeList](https://myanimelist.net/) — optional metadata fallback.
+- [MyAnimeList API v2](https://myanimelist.net/apiconfig/references/api/v2) — anime metadata and discovery.
 - [ZokoAnime](https://zokoanime.video/) and [MegaPlay](https://megaplay.buzz/) — external embed providers.
 
 Aniscroll is an independent project and is not affiliated with or endorsed by these services. Their names, APIs, artwork, and media remain subject to their respective terms and rights.
