@@ -6,7 +6,7 @@
 
 ## Features
 
-- **Discover anime:** Trending, popular, and currently airing titles.
+- **Discover anime:** Community favorites, popular titles, and currently airing anime.
 - **Search and filter:** Find titles and narrow results by format, status, genre, season, and year.
 - **Anime details:** View artwork, synopsis, ratings, genres, episode information, and related titles.
 - **Streaming player:** Choose between configured ZokoAnime and MegaPlay embeds.
