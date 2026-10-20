@@ -1,6 +1,6 @@
 # Aniscroll
 
-**Your anime universe.** Aniscroll is a responsive anime discovery and streaming interface built with HTML, CSS, and vanilla JavaScript. It uses MyAnimeList for anime discovery and metadata, with MyAnimeList (MAL) support for metadata and stream IDs where configured.
+**Your anime universe.** Aniscroll is a responsive anime discovery and streaming interface built with HTML, CSS, and vanilla JavaScript. It uses MyAnimeList for anime discovery and metadata, with MAL IDs used consistently for metadata and supported provider routes.
 
 > **Important:** Aniscroll does not host anime video files. Playback is provided through third-party embeds, and availability depends on those providers. Use only streams and media you are authorized to access.
 
@@ -10,8 +10,7 @@
 - **Search and filter:** Find titles and narrow results by format, status, genre, season, and year.
 - **Anime details:** View artwork, synopsis, ratings, genres, episode information, and related titles.
 - **Streaming player:** Choose between configured ZokoAnime and MegaPlay embeds.
-- **MyAnimeList-to-MAL API:** Retry supported streams using a title's MAL ID.
-- **MAL-only titles:** Use a MAL ID for supported metadata and provider routes.
+- **MAL ID support:** Use MyAnimeList IDs consistently across metadata and supported provider routes.
 - **Episode navigation:** Select episodes, move between episodes, and search long episode lists.
 - **Schedule:** Browse upcoming weekly broadcast times when MyAnimeList provides a broadcast day and time.
 - **Watchlist and history:** Save titles and track watched episodes in your browser.
@@ -114,7 +113,7 @@ These are integration URL patterns, not a guarantee that a title or episode is a
 ## Troubleshooting
 
 - **MyAnimeList requests say Client ID is missing:** Set `MAL_CLIENT_ID` in Vercel Project Settings → Environment Variables, then redeploy. For local development, put it in `.env` and restart Vite.
-- **An episode does not play:** Try another episode or provider. A fallback only works when a MAL ID exists and the provider supports that route.
+- **An episode does not play:** Try another episode or provider. Provider fallback works only when the title's MAL ID and the provider route are supported.
 - **Anime metadata does not load:** Check your internet connection, `MAL_CLIENT_ID`, and the availability of MyAnimeList API v2.
 - **Changes do not appear in Codespaces:** Save files and hard-refresh with `Ctrl+Shift+R`.
 
