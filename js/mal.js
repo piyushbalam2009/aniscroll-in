@@ -8,3 +8,15 @@ function normalize(m){const id=Number(m.id);const year=m.start_date&&/^\d{4}/.te
 export async function searchMalAnime(query){const q=String(query||"").trim();if(!q)return EMPTY;const json=await request(API+"?q="+encodeURIComponent(q)+"&limit=24&fields="+encodeURIComponent(MAL_FIELDS));const media=(json.data||[]).map(item=>normalize(item.node||item)).filter(a=>a.id>0);return {media,pageInfo:{total:media.length,currentPage:1,lastPage:1,hasNextPage:false}}}
 export async function getMalAnime(id){const malId=Number(id);if(!Number.isSafeInteger(malId)||malId<1)throw new Error("Invalid MyAnimeList ID.");let json=await request(API+"/"+malId+"?fields="+encodeURIComponent(MAL_FIELDS));if(!json||!Number(json.id))throw new Error("Anime not found on MyAnimeList.");if(!Number(json.num_episodes)){try{const search=await request(API+"?q="+encodeURIComponent(json.title||ENGLISH_TITLE_OVERRIDES[malId]||"anime")+"&limit=24&fields="+encodeURIComponent(MAL_FIELDS));const match=(search.data||[]).map(item=>item.node||item).find(item=>Number(item.id)===malId);if(match)json={...match,...json,num_episodes:Number(json.num_episodes)||Number(match.num_episodes)||EPISODE_COUNT_OVERRIDES[malId]||0,main_picture:json.main_picture||match.main_picture,alternative_titles:json.alternative_titles||match.alternative_titles,genres:json.genres||match.genres,synopsis:json.synopsis||match.synopsis,average_episode_duration:json.average_episode_duration||match.average_episode_duration};}catch{}}return normalize(json)}
 export async function searchMalGenre(genre,page=1){const g=String(genre||"").trim();if(!g)return EMPTY;const json=await request("/api/mal/genre?genre="+encodeURIComponent(g)+"&page="+Math.max(1,Number(page)||1));const media=(json.data||[]).map(item=>normalize(item.node||item)).filter(a=>a.id>0);return {media,pageInfo:{total:media.length,currentPage:Math.max(1,Number(page)||1),lastPage:json.paging?.has_more?Math.max(2,Number(page)+1):Math.max(1,Number(page)||1),hasNextPage:Boolean(json.paging?.has_more)}}}
+
+export async function getMalRanking(kind="all",page=1,limit=24){
+ const rankingType=({TRENDING:"all",POPULARITY:"bypopularity",SCORE:"all",NEWEST:"upcoming",AIRING:"airing",UPCOMING:"upcoming"})[kind]||kind;
+ const size=Math.min(100,Math.max(1,Number(limit)||24)),params=new URLSearchParams({ranking_type:rankingType,limit:String(size),offset:String((Math.max(1,Number(page)||1)-1)*size),fields:MAL_FIELDS});
+ const json=await request("/api/mal/ranking?"+params);
+ const media=(json.data||[]).map(item=>normalize(item.node||item)).filter(a=>a.id>0);
+ return {media,pageInfo:{total:Number(json.paging?.total)||media.length,currentPage:Math.max(1,Number(page)||1),lastPage:Math.max(1,Math.ceil((Number(json.paging?.total)||media.length)/size)),hasNextPage:Boolean(json.paging?.next)}};
+}
+export async function getMalAnimeByIds(ids=[]){
+ const clean=[...new Set(ids.map(Number).filter(x=>Number.isSafeInteger(x)&&x>0))].slice(0,24);
+ return (await Promise.all(clean.map(async id=>{try{return await getMalAnime(id)}catch{return null}}))).filter(Boolean);
+}
