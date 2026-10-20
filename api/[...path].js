@@ -64,6 +64,22 @@ export default async function handler(req, res) {
     return send(res, 200, { providers }, noStore);
   }
 
+
+  if (path === "/api/mal/ranking") {
+    if (!malKey(res)) return;
+    const allowed = new Set(["all","bypopularity","airing","upcoming","tv","ova","movie","special","favorite"]);
+    const rankingType = (url.searchParams.get("ranking_type") || "all").trim();
+    if (!allowed.has(rankingType)) return send(res, 400, { error: "Unsupported MyAnimeList ranking type." }, noStore);
+    const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit")) || 24));
+    const offset = Math.max(0, Number(url.searchParams.get("offset")) || 0);
+    const params = new URLSearchParams({ ranking_type: rankingType, limit: String(limit), offset: String(offset), fields });
+    try {
+      const upstream = await fetchJson("https://api.myanimelist.net/v2/anime/ranking?" + params, { headers: { "X-MAL-CLIENT-ID": process.env.MAL_CLIENT_ID, Accept: "application/json" } }, 12000);
+      if (!upstream.ok) return send(res, upstream.status === 429 ? 429 : 502, { error: "MyAnimeList ranking request failed", status: upstream.status }, noStore);
+      res.statusCode = 200; res.setHeader("Content-Type", "application/json; charset=utf-8"); res.setHeader("Cache-Control", "public, max-age=300"); return res.end(await upstream.text());
+    } catch (error) { return send(res, 502, { error: error.name === "AbortError" ? "MyAnimeList ranking request timed out" : "MyAnimeList ranking request failed" }, noStore); }
+  }
+
   if (path === "/api/mal/genre") {
     if (!malKey(res)) return;
     const genre = (url.searchParams.get("genre") || "").trim().toLowerCase();
