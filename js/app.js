@@ -153,6 +153,80 @@ async function watchPage(){
 }
 async function library(type){const n=type==="watchlist"?$("#library-results"):$("#history-results");if(type==="history"){$("#clear-history")?.addEventListener("click",()=>{if(confirm("Clear history on this device?")){write(K.h,[]);drawHistory(n,[])}});drawHistory(n,read(K.h));return}let filter="all";async function render(){const all=watchlist(),items=filter==="all"?all:all.filter(x=>x.status===filter);if(!items.length){n.innerHTML='<div class="empty-state"><span>♡</span><h2>Your watchlist starts here</h2><p>Save anime from any poster preview to build your collection.</p><a class="button button-primary" href="/search.html">Discover anime</a></div>';return}try{const aa=await getMalAnimeByIds(items.map(x=>x.id)),m=new Map(aa.map(x=>[x.id,x]));n.innerHTML=items.map(x=>{const a=m.get(Number(x.id));if(!a)return"";return'<article class="poster-card"><a class="poster-cover" href="/watch.html?id='+a.id+'"><img src="'+esc(cover(a))+'" alt="'+esc(title(a))+'"><span class="poster-score">★ '+score(a)+'</span></a><a class="poster-title" href="/watch.html?id='+a.id+'">'+esc(title(a))+'</a><div class="poster-meta">'+esc(meta(a))+'</div><label class="field" style="margin-top:8px"><span>List status</span><select class="control-select list-status" data-id="'+a.id+'" style="width:100%;max-width:none"><option value="watching" '+(x.status==="watching"?"selected":"")+'>Watching</option><option value="planned" '+(x.status==="planned"?"selected":"")+'>Plan to watch</option><option value="completed" '+(x.status==="completed"?"selected":"")+'>Completed</option><option value="dropped" '+(x.status==="dropped"?"selected":"")+'>Dropped</option></select></label><button class="button button-quiet button-small remove-saved" data-id="'+a.id+'" style="margin-top:8px;width:100%">Remove</button></article>'}).join("");$$(".list-status",n).forEach(s=>s.addEventListener("change",()=>{const l=watchlist(),it=l.find(x=>Number(x.id)===Number(s.dataset.id));if(it)it.status=s.value;write(K.w,l);toast("Watchlist updated");if(filter!=="all")render()}));$$(".remove-saved",n).forEach(b=>b.addEventListener("click",()=>{write(K.w,watchlist().filter(x=>Number(x.id)!==Number(b.dataset.id)));render();toast("Removed from watchlist")}))}catch(e){n.innerHTML='<div class="empty-state"><p>'+esc(e.message)+'</p></div>'}}$$(".library-tab").forEach(b=>b.addEventListener("click",()=>{filter=b.dataset.list;$$(".library-tab").forEach(x=>x.classList.toggle("active",x===b));render()}));await render()}
 async function genresPage(){const gs=["Action","Adventure","Comedy","Drama","Fantasy","Horror","Mahou Shoujo","Mecha","Music","Mystery","Psychological","Romance","Sci-Fi","Slice of Life","Sports","Supernatural","Thriller"];$("#genre-directory").innerHTML=gs.map(g=>'<a class="genre-tile" href="/search.html?genre='+encodeURIComponent(g)+'">'+esc(g)+' <span>↗</span></a>').join("");try{draw($("#genre-featured"),(await getMalRanking("TRENDING",1,6)).media)}catch(e){$("#genre-featured").innerHTML='<div class="empty-state"><p>'+esc(e.message)+'</p></div>'}}
-async function schedulePage(){const list=$("#schedule-list"),tabs=$("#schedule-day-tabs"),range=$("#schedule-range"),clock=$("#schedule-clock"),week=$("#schedule-week");if(clock)clock.textContent=new Date().toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});if(week)week.textContent="MyAnimeList public API";if(range)range.textContent="Schedule unavailable from MAL API";if(tabs)tabs.innerHTML="";if(list)list.innerHTML='<div class="schedule-empty"><h2>Episode schedule unavailable</h2><p>This site uses MyAnimeList exclusively. Its public API does not provide the episode-by-episode airing timetable required for this calendar.</p><a class="button button-primary" href="/search.html">Discover anime</a></div>';$("#refresh-schedule")?.addEventListener("click",()=>toast("MyAnimeList does not provide schedule data for this calendar."))}
+async function schedulePage(){
+ const list=$("#schedule-list"),tabs=$("#schedule-day-tabs"),range=$("#schedule-range"),clock=$("#schedule-clock"),week=$("#schedule-week");
+ const dayNames=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+ const dayShort=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+ let selectedDay=0,mode="all",items=[],loading=false;
+ const localDateKey=date=>{const y=date.getFullYear(),m=String(date.getMonth()+1).padStart(2,"0"),d=String(date.getDate()).padStart(2,"0");return y+"-"+m+"-"+d};
+ const dateOnly=date=>new Date(date.getFullYear(),date.getMonth(),date.getDate());
+ const dateDiff=(a,b)=>Math.round((Date.UTC(a.getFullYear(),a.getMonth(),a.getDate())-Date.UTC(b.getFullYear(),b.getMonth(),b.getDate()))/86400000);
+ const updateClock=()=>{if(clock)clock.textContent=new Date().toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit",second:"2-digit"})};
+ const zonedParts=(date,timeZone)=>Object.fromEntries(new Intl.DateTimeFormat("en-US",{timeZone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(date).filter(x=>x.type!=="literal").map(x=>[x.type,Number(x.value)]));
+ const zonedDate=(year,month,day,hour,minute,timeZone)=>{
+  const target=Date.UTC(year,month-1,day,hour,minute,0);let guess=target;
+  for(let i=0;i<4;i++){const p=zonedParts(new Date(guess),timeZone),represented=Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second);guess+=target-represented}
+  return new Date(guess)
+ };
+ const nextBroadcast=anime=>{
+  const b=anime.broadcast;if(!b?.day||!b?.time)return null;
+  const match=/^(\d{1,2}):(\d{2})$/.exec(String(b.time));if(!match)return null;
+  const weekday={sun:0,mon:1,tue:2,wed:3,thu:4,fri:5,sat:6}[String(b.day).slice(0,3).toLowerCase()];
+  if(weekday===undefined)return null;
+  const hour=Number(match[1]),minute=Number(match[2]);if(hour>23||minute>59)return null;
+  const zone=b.timezone||"Asia/Tokyo";
+  try{
+   const p=zonedParts(new Date(),zone),todayIndex=new Date(Date.UTC(p.year,p.month-1,p.day)).getUTCDay();
+   let delta=(weekday-todayIndex+7)%7;
+   let target=new Date(Date.UTC(p.year,p.month-1,p.day+delta));
+   let at=zonedDate(target.getUTCFullYear(),target.getUTCMonth()+1,target.getUTCDate(),hour,minute,zone);
+   if(at<=new Date()){delta+=7;target=new Date(Date.UTC(p.year,p.month-1,p.day+delta));at=zonedDate(target.getUTCFullYear(),target.getUTCMonth()+1,target.getUTCDate(),hour,minute,zone)}
+   return at
+  }catch{return null}
+ };
+ const relative=at=>{const ms=at-Date.now();if(ms<=0)return "Airing now";const d=Math.floor(ms/86400000),h=Math.floor(ms%86400000/3600000),m=Math.floor(ms%3600000/60000);if(d)return "In "+d+"d "+h+"h";if(h)return "In "+h+"h "+m+"m";return "In "+Math.max(1,m)+"m"};
+ const weekDays=Array.from({length:7},(_,i)=>{const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()+i);return d});
+ if(week)week.textContent="Broadcast times from MyAnimeList · your local timezone";
+ updateClock();const clockTimer=setInterval(()=>{if(!document.getElementById("schedule-clock")){clearInterval(clockTimer);return}updateClock()},1000);
+ const renderTabs=()=>{
+  if(!tabs)return;
+  tabs.innerHTML=weekDays.map((d,i)=>'<button type="button" class="schedule-day-tab '+(i===selectedDay?"active":"")+'" data-schedule-day="'+i+'"><strong>'+dayShort[d.getDay()]+'</strong><small>'+d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+'</small></button>').join("");
+  $$("[data-schedule-day]",tabs).forEach(b=>b.addEventListener("click",()=>{selectedDay=Number(b.dataset.scheduleDay);renderTabs();renderList()}))
+ };
+ const renderList=()=>{
+  if(!list)return;
+  const date=weekDays[selectedDay],key=localDateKey(date),daily=items.filter(x=>localDateKey(x.at)===key).sort((a,b)=>a.at-b.at);
+  if(range)range.textContent=date.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})+" · "+daily.length+" broadcast"+(daily.length===1?"":"s")+" · local time";
+  if(!daily.length){list.innerHTML='<div class="schedule-empty"><h2>No broadcasts listed for this day</h2><p>MyAnimeList has not provided a weekly broadcast time for the currently airing titles we found.</p><a class="button button-primary" href="/search.html">Discover anime</a></div>';return}
+  list.innerHTML=daily.map(x=>{
+   const a=x.anime,id=Number(a.id),url="/watch.html?source=mal&id="+id+"&mal="+id+"&ep=1"+(mode==="all"?"":"&mode="+mode),poster=cover(a),genre=(a.genres||[]).slice(0,3);
+   const broadcastText=a.broadcast?.string||("Scheduled "+a.broadcast.day+" at "+a.broadcast.time+" ("+(a.broadcast.timezone||"Asia/Tokyo")+")");
+   return '<article class="schedule-episode-card"><div class="schedule-time-column"><strong>'+esc(x.at.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}))+'</strong><small>'+esc(dayNames[x.at.getDay()])+'</small></div><a class="schedule-poster" href="'+url+'"><img src="'+esc(poster)+'" alt="'+esc(title(a))+' poster" loading="lazy"></a><div class="schedule-card-info"><a class="schedule-title" href="'+url+'">'+esc(title(a))+'</a><div class="schedule-card-meta"><span>TV</span><span>'+esc(a.format||"Anime")+'</span><span>MyAnimeList broadcast</span></div><p>'+esc(broadcastText)+'</p><div class="schedule-tags">'+genre.map(g=>'<span>'+esc(g)+'</span>').join("")+'</div></div><div class="schedule-countdown">'+esc(relative(x.at))+'</div></article>'
+  }).join("");
+ };
+ const load=async()=>{
+  if(loading)return;loading=true;
+  if(list)list.innerHTML='<div class="schedule-empty"><h2>Loading weekly broadcasts…</h2><p>Fetching current airing titles and broadcast times from MyAnimeList.</p></div>';
+  if(range)range.textContent="Loading MyAnimeList…";
+  try{
+   const result=await getMalRanking("AIRING",1,100),seen=new Set(),next=[];
+   for(const anime of result.media||[]){
+    const id=Number(anime.id);if(!id||seen.has(id)||!anime.broadcast)continue;seen.add(id);
+    const at=nextBroadcast(anime);if(!at)continue;
+    const dayOffset=dateDiff(dateOnly(at),dateOnly(new Date()));
+    if(dayOffset>=0&&dayOffset<7)next.push({anime,at});
+   }
+   items=next;renderTabs();renderList();
+   if(!items.length&&list)list.innerHTML='<div class="schedule-empty"><h2>No weekly broadcast times found</h2><p>MyAnimeList did not return broadcast day and time data for the current airing titles. Try refreshing later.</p><a class="button button-primary" href="/search.html">Discover anime</a></div>';
+  }catch(e){
+   if(range)range.textContent="Schedule could not load";
+   if(list)list.innerHTML='<div class="schedule-empty"><h2>Could not load schedule</h2><p>'+esc(e.message||"MyAnimeList request failed")+'</p><button type="button" class="button button-quiet" id="schedule-retry">Retry</button></div>';
+   $("#schedule-retry")?.addEventListener("click",load)
+  }finally{loading=false}
+ };
+ $$(".schedule-mode-tabs button").forEach(b=>b.addEventListener("click",()=>{mode=b.dataset.scheduleMode||"all";$$(".schedule-mode-tabs button").forEach(x=>x.classList.toggle("active",x===b));renderList()}));
+ $("#refresh-schedule")?.addEventListener("click",load);
+ renderTabs();await load();
+}
 
 header();footer();const page=document.body.dataset.page;if(page==="home")home();if(page==="search")searchPage();if(page==="anime")animePage();if(page==="watch")watchPage();if(page==="watchlist")library("watchlist");if(page==="history")library("history");if(page==="schedule")schedulePage();
