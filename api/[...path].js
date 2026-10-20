@@ -55,7 +55,7 @@ export default async function handler(req, res) {
       try {
         const response = await fetchJson(candidate.url, {}, 8000);
         const body = (await response.text()).slice(0, 12000).toLowerCase();
-        const isError = /not found|404|couldn.t find anything to play|nothing to play|no stream|stream unavailable|episode unavailable|oops! something went wrong|something went wrong|page you.re looking for doesn.t exist|doesn.t exist or has|page not found|tv tokyo/.test(body);
+        const isError = /not found|404|couldn.t find anything to play|nothing to play|no stream|stream unavailable|episode unavailable|oops! something went wrong|something went wrong|page you.re looking for doesn.t exist|doesn.t exist or has|page not found/.test(body);
         return { provider: candidate.provider, available: response.ok && !isError };
       } catch {
         return { provider: candidate.provider, available: false };
@@ -70,8 +70,8 @@ export default async function handler(req, res) {
     const allowed = new Set(["all","bypopularity","airing","upcoming","tv","ova","movie","special","favorite"]);
     const rankingType = (url.searchParams.get("ranking_type") || "all").trim();
     if (!allowed.has(rankingType)) return send(res, 400, { error: "Unsupported MyAnimeList ranking type." }, noStore);
-    const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit")) || 24));
-    const offset = Math.max(0, Number(url.searchParams.get("offset")) || 0);
+    const limit = Math.min(100, Math.max(1, Math.floor(Number(url.searchParams.get("limit")) || 24)));
+    const offset = Math.max(0, Math.floor(Number(url.searchParams.get("offset")) || 0));
     const params = new URLSearchParams({ ranking_type: rankingType, limit: String(limit), offset: String(offset), fields });
     try {
       const upstream = await fetchJson("https://api.myanimelist.net/v2/anime/ranking?" + params, { headers: { "X-MAL-CLIENT-ID": process.env.MAL_CLIENT_ID, Accept: "application/json" } }, 12000);
@@ -83,9 +83,10 @@ export default async function handler(req, res) {
   if (path === "/api/mal/genre") {
     if (!malKey(res)) return;
     const genre = (url.searchParams.get("genre") || "").trim().toLowerCase();
-    const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
+    const page = Math.max(1, Math.floor(Number(url.searchParams.get("page")) || 1));
     if (!validGenres.has(genre)) return send(res, 400, { error: "Unsupported MyAnimeList genre." }, noStore);
-    const offsets = [(page - 1) * 100, (page - 1) * 100 + 100, (page - 1) * 100 + 200];
+    const baseOffset = (page - 1) * 300;
+    const offsets = [baseOffset, baseOffset + 100, baseOffset + 200];
     try {
       const responses = await Promise.all(offsets.map(async offset => {
         const params = new URLSearchParams({ ranking_type: "all", limit: "100", offset: String(offset), fields: "alternative_titles,synopsis,mean,popularity,num_episodes,media_type,status,start_date,genres" });
@@ -102,7 +103,7 @@ export default async function handler(req, res) {
         seen.add(id);
         if ((node.genres || []).some(g => String(g.name || "").toLowerCase() === genre)) matches.push(node);
       }
-      return send(res, 200, { data: matches.slice(0, 24).map(node => ({ node })), paging: { has_more: responses.some(x => (x.data || []).length === 100) } }, { "Cache-Control": "public, max-age=300" });
+      return send(res, 200, { data: matches.slice(0, 24).map(node => ({ node })), paging: { has_more: Boolean(responses[responses.length - 1]?.paging?.next) } }, { "Cache-Control": "public, max-age=300" });
     } catch (error) {
       return send(res, 502, { error: error.name === "AbortError" ? "MyAnimeList genre search timed out" : "MyAnimeList genre search failed" }, noStore);
     }
