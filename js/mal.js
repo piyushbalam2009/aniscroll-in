@@ -14,9 +14,9 @@ export async function getMalRanking(kind="all",page=1,limit=24){
  const size=Math.min(100,Math.max(1,Number(limit)||24)),params=new URLSearchParams({ranking_type:rankingType,limit:String(size),offset:String((Math.max(1,Number(page)||1)-1)*size),fields:MAL_FIELDS});
  const json=await request("/api/mal/ranking?"+params);
  const media=(json.data||[]).map(item=>normalize(item.node||item)).filter(a=>a.id>0);
- return {media,pageInfo:{total:Number(json.paging?.total)||media.length,currentPage:Math.max(1,Number(page)||1),lastPage:Math.max(1,Math.ceil((Number(json.paging?.total)||media.length)/size)),hasNextPage:Boolean(json.paging?.next)}};
+ const currentPage=Math.max(1,Math.floor(Number(page)||1)),total=Number(json.paging?.total)||0,hasNextPage=Boolean(json.paging?.next),lastPage=total?Math.ceil(total/size):currentPage+(hasNextPage?1:0);\n return {media,pageInfo:{total,currentPage,lastPage:Math.max(1,lastPage),hasNextPage}};
 }
 export async function getMalAnimeByIds(ids=[]){
  const clean=[...new Set(ids.map(Number).filter(x=>Number.isSafeInteger(x)&&x>0))].slice(0,24);
- return (await Promise.all(clean.map(async id=>{try{return await getMalAnime(id)}catch{return null}}))).filter(Boolean);
+ const results=Array(clean.length);let cursor=0;await Promise.all(Array.from({length:Math.min(4,clean.length)},async()=>{while(cursor<clean.length){const index=cursor++;try{results[index]=await getMalAnime(clean[index])}catch{results[index]=null}}}));return results.filter(Boolean);
 }
